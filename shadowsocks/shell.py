@@ -125,8 +125,11 @@ def check_config(config, is_local):
 
 
 def get_config(is_local):
+    
+    # 定义全局变量
     global verbose
-
+    
+    # 日志格式配置
     logging.basicConfig(level=logging.INFO,
                         format='%(levelname)-s: %(message)s')
     if is_local:
