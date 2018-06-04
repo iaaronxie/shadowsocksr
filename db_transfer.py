@@ -14,10 +14,12 @@ switchrule = None
 db_instance = None
 
 class TransferBase(object):
+
+	# 构造函数
 	def __init__(self):
 		import threading
-		self.event = threading.Event()
-		self.key_list = ['port', 'u', 'd', 'transfer_enable', 'passwd', 'enable']
+		self.event = threading.Event() # 定义线程事件
+		self.key_list = ['port', 'u', 'd', 'transfer_enable', 'passwd', 'enable'] # 数据库用户表中相关的字段
 		self.last_get_transfer = {} #上一次的实际流量
 		self.last_update_transfer = {} #上一次更新到的流量（小于等于实际流量）
 		self.force_update_transfer = set() #强制推入数据库的ID
@@ -25,7 +27,8 @@ class TransferBase(object):
 		self.onlineuser_cache = lru_cache.LRUCache(timeout=60*30) #用户在线状态记录
 		self.pull_ok = False #记录是否已经拉出过数据
 		self.mu_ports = {}
-
+	
+	# question:这方法没用
 	def load_cfg(self):
 		pass
 
@@ -34,7 +37,10 @@ class TransferBase(object):
 			return
 		#更新用户流量到数据库
 		last_transfer = self.last_update_transfer
+
+		# ServerPool.get_instance() 为实例化 ServerPool 对象
 		curr_transfer = ServerPool.get_instance().get_servers_transfer()
+		
 		#上次和本次的增量
 		dt_transfer = {}
 		for id in self.force_update_transfer: #此表中的用户统计上次未计入的流量
@@ -221,15 +227,27 @@ class TransferBase(object):
 			if ServerPool.get_instance().server_is_run(port) > 0:
 				ServerPool.get_instance().cb_del_server(port)
 
+	# python 静态方法，无法访问类中定义的变量，外部使用 class.method 来调用
+	# https://www.cnblogs.com/2gua/archive/2012/09/03/2668125.html
 	@staticmethod
 	def thread_db(obj):
 		import socket
 		import time
+		
+		# global 标识符说明当前变量是全局变量，就是定义在文件最顶部的 db_instance，后面对
+		# db_instance 变量的操作都会对全局变量进行操作
+		# https://blog.csdn.net/dongtingzhizi/article/details/8973569
 		global db_instance
 		timeout = 60
+
+		# 此处应该是为操作设置超时时间，超时了就不继续执行了
 		socket.setdefaulttimeout(timeout)
+
 		last_rows = []
+
+		# 实例化 obj，python实例化类直接使用 类名() 即可实例化，不需要使用 new 关键字
 		db_instance = obj()
+
 		ServerPool.get_instance()
 		shell.log_shadowsocks_version()
 
@@ -278,9 +296,11 @@ class TransferBase(object):
 		global db_instance
 		db_instance.event.set()
 
+# sspanel
+# DbTransfer 继承自 TransferBase
 class DbTransfer(TransferBase):
 	def __init__(self):
-		super(DbTransfer, self).__init__()
+		super(DbTransfer, self).__init__() # 调用父类的构造函数，python 类继承不回自动调用构造函数
 		self.user_pass = {} #记录更新此用户流量时被跳过多少次
 		self.cfg = {
 			"host": "127.0.0.1",
@@ -298,11 +318,16 @@ class DbTransfer(TransferBase):
 
 	def load_cfg(self):
 		import json
+
+		# mysql 数据库配置文件地址
 		config_path = get_config().MYSQL_CONFIG
+
+		# 读取数据库配置
 		cfg = None
 		with open(config_path, 'rb+') as f:
 			cfg = json.loads(f.read().decode('utf8'))
 
+		# 将数据库配置更新到类变量中
 		if cfg:
 			self.cfg.update(cfg)
 
@@ -409,6 +434,7 @@ class DbTransfer(TransferBase):
 		cur.close()
 		return rows
 
+# 非 mudbjson 与 sspanel 情况
 class Dbv3Transfer(DbTransfer):
 	def __init__(self):
 		super(Dbv3Transfer, self).__init__()
@@ -580,6 +606,7 @@ class Dbv3Transfer(DbTransfer):
 
 		return str(round((traffic / 1048576.0), 2)) + "MB";
 
+# mudbjson
 class MuJsonTransfer(TransferBase):
 	def __init__(self):
 		super(MuJsonTransfer, self).__init__()

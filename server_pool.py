@@ -63,6 +63,7 @@ class ServerPool(object):
 		self.thread = MainThread( (self.loop, self.dns_resolver, self.mgr) )
 		self.thread.start()
 
+	# 实例化 ServerPool
 	@staticmethod
 	def get_instance():
 		if ServerPool.instance is None:
@@ -270,6 +271,8 @@ class ServerPool(object):
 			user_dict[port][1] += d[uid]
 
 	def get_servers_transfer(self):
+
+		# copy 方法是对对象的浅拷贝
 		servers = self.tcp_servers_pool.copy()
 		servers.update(self.tcp_ipv6_servers_pool)
 		servers.update(self.udp_servers_pool)
